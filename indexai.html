@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <!-- Google Fonts: Poppins for a modern, smooth aesthetic -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Define CSS variables for consistent theming */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            --dark-background: #1a1a2e; /* Dark mode background */
+            --card-background: #16213e; /* Slightly lighter dark background for card */
+            --text-color: #e0e0e0; /* Light text for dark background */
+            --border-radius: 12px; /* Rounded corners for elements */
+            --input-border: #4a4a6e; /* Border color for input fields */
+            --button-hover: #4a4a6e; /* Hover effect color for buttons */
+            --shadow-color: rgba(0, 0, 0, 0.3); /* Shadow for depth */
+        }
+
+        /* Basic reset and body styling */
+        body {
+            font-family: 'Poppins', sans-serif; /* Apply Poppins font */
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            min-height: 100vh; /* Full viewport height */
+            background: var(--dark-background); /* Dark background */
+            color: var(--text-color); /* Light text */
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            box-sizing: border-box; /* Include padding in element's total width/height */
+        }
+
+        /* Container for the entire application, max width 800px */
+        .container {
+            background: var(--card-background);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            width: 100%;
+            max-width: 800px; /* Max width as per design requirements */
+            box-shadow: 0 10px 30px var(--shadow-color);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        /* Heading styling with gradient text */
+        h1 {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text; /* Clip background to text shape */
+            -webkit-text-fill-color: transparent; /* Make text color transparent to show gradient */
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        /* Input group spacing */
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        /* Prompt input field styling */
+        #prompt {
+            width: calc(100% - 20px); /* Full width minus padding compensation */
+            padding: 15px;
+            border: 2px solid var(--input-border);
+            border-radius: var(--border-radius); /* Rounded corners */
+            background-color: var(--dark-background);
+            color: var(--text-color);
+            font-size: 1em;
+            outline: none; /* Remove default outline on focus */
+            transition: border-color 0.3s ease; /* Smooth transition for border color */
+        }
+
+        #prompt::placeholder {
+            color: #888; /* Placeholder text color */
+        }
+
+        #prompt:focus {
+            border-color: #2575fc; /* Highlight border on focus */
+        }
+
+        /* Generate button styling with gradient and hover effects */
+        #generateBtn {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth hover animations */
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
+        }
+
+        #generateBtn:hover {
+            transform: translateY(-3px); /* Lift button on hover */
+            box-shadow: 0 8px 20px rgba(37, 117, 252, 0.6); /* Enhance shadow on hover */
+        }
+
+        /* Loading spinner container */
+        .loading {
+            display: none; /* Hidden by default, shown with JS */
+            margin-top: 30px;
+            animation: fadeIn 0.5s forwards; /* Fade in animation */
+        }
+
+        /* Actual spinner animation */
+        .spinner {
+            border: 6px solid rgba(255, 255, 255, 0.3);
+            border-top: 6px solid #2575fc; /* Blue top border for spin effect */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite; /* Spin animation */
+            margin: 0 auto;
+        }
+
+        /* Keyframe animation for spinning */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Keyframe animation for fading in elements */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Image container styling */
+        #imageContainer {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            display: none; /* Hidden by default, shown with JS */
+            animation: fadeIn 0.5s forwards; /* Fade in animation */
+        }
+
+        /* Generated image styling */
+        #generatedImage {
+            max-width: 100%; /* Ensure image fits container */
+            height: auto;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 20px var(--shadow-color);
+            transition: transform 0.3s ease; /* Smooth hover effect */
+        }
+
+        #generatedImage:hover {
+            transform: scale(1.02); /* Slightly enlarge image on hover */
+        }
+
+        /* Download button styling */
+        #downloadBtn {
+            background: #4CAF50; /* A pleasant green */
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            display: none; /* Hidden by default, shown with JS */
+        }
+
+        #downloadBtn:hover {
+            background-color: #45a049; /* Darker green on hover */
+            transform: translateY(-2px); /* Lift button on hover */
+        }
+
+        /* Responsive adjustments for smaller screens (tablets) */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em; /* Smaller heading */
+            }
+            .container {
+                padding: 20px; /* Less padding */
+            }
+            #prompt {
+                padding: 12px;
+                font-size: 0.95em;
+            }
+            #generateBtn {
+                padding: 12px 25px;
+                font-size: 1em;
+            }
+        }
+
+        /* Responsive adjustments for mobile phones */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 20px;
+            }
+            .container {
+                padding: 15px;
+                margin: 10px; /* Add some margin around the container */
+            }
+            #prompt {
+                font-size: 0.9em;
+            }
+            #generateBtn {
+                width: 100%; /* Full width button on small screens */
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Image Generator</h1>
+
+        <div class="input-group">
+            <!-- Input field for the user to type their image prompt -->
+            <input type="text" id="prompt" placeholder="Enter your prompt here (e.g., A futuristic city at sunset, digital art)">
+        </div>
+
+        <!-- Button to trigger image generation -->
+        <button id="generateBtn">Generate Image</button>
+
+        <!-- Loading spinner and message, hidden by default -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Generating image... (This may take a few moments)</p>
+        </div>
+
+        <!-- Container for the generated image and download button, hidden by default -->
+        <div id="imageContainer">
+            <img id="generatedImage" src="" alt="Generated Image Placeholder">
+            <button id="downloadBtn">Download Image</button>
+        </div>
+    </div>
+
+    <script>
+        // --- IMPORTANT SECURITY WARNING ---
+        // Your Stability AI API key is directly embedded here.
+        // This is NOT secure for production environments as it's visible to anyone
+        // inspecting your web page's source code.
+        // For production, always use a backend server or serverless function
+        // to proxy requests to Stability AI, keeping your API key secure on the server side.
+        const STABILITY_API_KEY = 'sk-MkccdQgwSCzUhFSb2AfN0zlKaWRdqgXczteJ1wQNFUDLM9qI'; // Your updated Stability AI API key
+        
+        // Define the Stability AI engine/model ID
+        // Changed to a more commonly used and stable SDXL model ID.
+        // You can find other engines here: https://platform.stability.ai/docs/api-reference#tag/Generate/paths/~1v1beta~1generation~1{engine_id}~1text-to-image/post
+        const STABILITY_ENGINE_ID = 'stable-diffusion-xl-1024-v1-0'; // A powerful SDXL model
+
+        // Define the API URL for Stability AI
+        const STABILITY_API_URL = `https://api.stability.ai/v1/generation/${STABILITY_ENGINE_ID}/text-to-image`;
+
+        // Get references to DOM elements
+        const promptInput = document.getElementById('prompt');
+        const generateBtn = document.getElementById('generateBtn');
+        const imageContainer = document.getElementById('imageContainer');
+        const loadingSpinner = document.getElementById('loading');
+        const generatedImage = document.getElementById('generatedImage');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Add event listener to the generate button
+        generateBtn.addEventListener('click', generateImage);
+
+        /**
+         * Asynchronous function to handle image generation using Stability AI API.
+         * It sends the user's prompt and displays the generated image.
+         */
+        async function generateImage() {
+            const prompt = promptInput.value.trim();
+
+            // Input validation: ensure prompt is not empty
+            if (!prompt) {
+                alert('Please enter a prompt!');
+                return;
+            }
+
+            // --- UI State Management ---
+            // 1. Hide previous image and download button
+            imageContainer.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            generatedImage.src = ''; // Clear previous image source
+
+            // 2. Show loading spinner
+            loadingSpinner.style.display = 'block';
+            generateBtn.disabled = true; // Disable button to prevent multiple clicks
+
+            try {
+                // --- API Call to Stability AI ---
+                const payload = {
+                    text_prompts: [
+                        { text: prompt, weight: 1 } // The user's prompt
+                    ],
+                    cfg_scale: 7, // Classifier-free guidance scale
+                    clip_guidance_preset: 'FAST_BLUE', // Preset for CLIP guidance
+                    // Corrected dimensions for stable-diffusion-xl-1024-v1-0
+                    height: 1024, 
+                    width: 1024,
+                    samples: 1,  // Number of images to generate (1 for simplicity)
+                    steps: 30    // Number of diffusion steps
+                };
+
+                const response = await fetch(
+                    STABILITY_API_URL,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json', // Specify acceptance of JSON response
+                            'Authorization': `Bearer ${STABILITY_API_KEY}` // Your API key
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+
+                // --- TEMPORARY DEBUGGING LOGS ---
+                console.log("API Response Status:", response.status);
+                // END TEMPORARY DEBUGGING LOGS
+
+                // Check if the API response was successful
+                if (!response.ok) {
+                    let errorMessage = `HTTP error! Status: ${response.status}.`;
+                    const contentType = response.headers.get('Content-Type');
+
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        errorMessage += ` Message: ${errorData.message || JSON.stringify(errorData)}`;
+                        console.error("API Error Data:", errorData); // Log error details
+                    } else {
+                        const errorText = await response.text();
+                        errorMessage += ` Response: "${errorText.substring(0, 100)}..."`; // Truncate long text
+                        console.error("API Error Raw Text:", errorText); // Log raw error text
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+
+                // --- TEMPORARY DEBUGGING LOGS ---
+                console.log("Full API Response (after JSON parse):", result); 
+                // END TEMPORARY DEBUGGING LOGS
+
+                // Stability AI returns an 'artifacts' array, containing base64 images
+                if (!result.artifacts || result.artifacts.length === 0 || !result.artifacts[0].base64) {
+                    throw new Error('No image data received from Stability AI. Please try a different prompt.');
+                }
+
+                // Get the base64 encoded image data from the first artifact
+                const base64ImageData = result.artifacts[0].base64;
+
+                // --- TEMPORARY DEBUGGING LOGS ---
+                console.log("Base64 Image Data (first 100 chars):", base64ImageData ? base64ImageData.substring(0, 100) : "No Base64 data");
+                // END TEMPORARY DEBUGGING LOGS
+
+                // --- FIX: Corrected typo from base664 to base64 ---
+                const imageUrl = `data:image/png;base64,${base64ImageData}`; 
+
+                // --- UI Update after successful generation ---
+                generatedImage.src = imageUrl; // Set the source of the image element
+                imageContainer.style.display = 'flex'; // Show the image container
+                downloadBtn.style.display = 'block'; // Show the download button
+
+                // Set up the download button's click handler
+                downloadBtn.onclick = () => downloadImage(imageUrl, prompt);
+
+            } catch (error) {
+                // --- Error Handling ---
+                console.error('Error generating image:', error);
+                alert(`Failed to generate image: ${error.message || 'An unexpected error occurred. Please check your API key, network connection, or try a different prompt.'}`);
+            } finally {
+                // --- Final UI State Reset ---
+                loadingSpinner.style.display = 'none'; // Hide loading spinner
+                generateBtn.disabled = false; // Re-enable generate button
+            }
+        }
+
+        /**
+         * Function to download the generated image.
+         * Creates a temporary anchor tag and triggers a download.
+         * @param {string} imageUrl - The data URL of the image to download.
+         * @param {string} prompt - The prompt used for the image, for filename suggestion.
+         */
+        function downloadImage(imageUrl, prompt) {
+            const a = document.createElement('a'); // Create a temporary anchor element
+            a.href = imageUrl; // Set its href to the image URL (which is a data URL)
+            // Suggest a filename, sanitize prompt for filename
+            a.download = `ai-image-${prompt.substring(0, 50).replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').toLowerCase() || 'generated'}.png`;
+            document.body.appendChild(a); // Append to body (required for Firefox)
+            a.click(); // Programmatically click the link to trigger download
+            document.body.removeChild(a); // Clean up the temporary link
+            // No need to revokeObjectURL for data URLs with data URIs
+        }
+    </script>
+</body>
+</html>
